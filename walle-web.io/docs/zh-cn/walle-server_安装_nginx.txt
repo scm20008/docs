@@ -1,0 +1,126 @@
+sudo apt-get update
+sudo apt-get install mysql-server mysql-client -y
+sudo apt-get install nginx -y
+sudo apt-get install php5 php5-gd php5-xcache php5-json php5-mcrypt php5-mysql php5-readline php5-fpm -y
+
+sudo apt-get install git curl -y
+sudo su
+
+mkdir -p /data/www/walle-web && cd /data/www/walle-web/
+git clone https://github.com/meolu/walle-web.git .
+mysql -u root -p
+# 新建数据库：walle
+CREATE DATABASE walle DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+
+vi config/web.php
+vi config/local.php
+# 修改如下，
+'db' => [
+    'dsn'       => 'mysql:host=127.0.0.1;dbname=walle', # 新建数据库walle
+    'username'  => 'root',                          # 连接的用户名
+    'password'  => 'root',                          # 连接的密码
+],
+
+
+cd
+curl -sS https://getcomposer.org/installer | php
+mv composer.phar /usr/local/bin/composer
+cd /data/www/walle-web/
+composer install --prefer-dist --no-dev --optimize-autoloader -vvvv
+# 上面的命令没用，需要将vendor.tgz拷贝过来才行
+
+./yii walle/setup
+
+
+# 修改nginx配置
+mv /etc/nginx/sites-available/default /etc/nginx/sites-available/default-bak
+vi /etc/nginx/sites-available/default
+
+server {
+	listen       80;
+	server_name  localhost;
+	root /data/www/walle-web/web;
+	index index.php;
+
+	location / {
+		try_files $uri $uri/ /index.php$is_args$args;
+	}
+
+	location ~ \.php$ {
+		try_files $uri = 404;
+		fastcgi_pass   unix:/var/run/php5-fpm.sock;
+		fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+		include        fastcgi_params;
+	}
+}
+
+
+
+
+
+
+
+
+
+# 报502的问题解决办法
+升级到ubuntu 12.10 后nginx报502错误，php无法运行。
+netstat -an未发现监听9000端口。
+查看/var/log/php5-fpm.log一切正常。
+随后查看/etc/php5/fpm/pool.d/www.conf，发现listen = /var/run/php5-fpm.sock。
+
+修改nginx下的sites配置
+        location ~ \.php$ {
+                fastcgi_pass 127.0.0.1:9000;
+                fastcgi_index index.php;
+                fastcgi_param APPLICATION_ENV production;
+                include fastcgi_params;
+        }
+
+为
+        location ~ \.php$ {
+                fastcgi_pass unix:/var/run/php5-fpm.sock;
+                fastcgi_index index.php;
+                fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+                include fastcgi_params;
+        }
+
+重启php5-fpm与nginx后，恢复。
+
+
+
+
+
+
+
+# 如果是centos，只需备份nginx.conf，新建一个nginx.conf，内容如下，
+worker_processes  4;
+events {
+    worker_connections  2048;
+}
+
+http {
+    include       mime.types;
+    default_type  application/octet-stream;
+    sendfile        on;
+    keepalive_timeout  65;
+    gzip  on;
+    client_max_body_size 20m;
+
+    server {
+		listen       80;
+		server_name  localhost;
+		root /data/www/walle-web/web;
+		index index.php;
+
+		location / {
+			try_files $uri $uri/ /index.php$is_args$args;
+		}
+
+		location ~ \.php$ {
+			try_files $uri = 404;
+			fastcgi_pass   127.0.0.1:9000;
+			fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+			include        fastcgi_params;
+		}
+    }
+}
