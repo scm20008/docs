@@ -27,7 +27,8 @@ curl -sS https://getcomposer.org/installer | php
 mv composer.phar /usr/local/bin/composer
 cd /data/www/walle-web/
 composer install --prefer-dist --no-dev --optimize-autoloader -vvvv
-# 上面的命令没用，需要将vendor.tgz拷贝过来并解压到walle-web目录才行
+# 上面的命令如果没用，则需要将vendor.tgz拷贝过来并解压到walle-web目录才行
+# vendor.tgz下载地址详见官方文档
 
 ./yii walle/setup   # 输入yes
 
