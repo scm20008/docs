@@ -12,7 +12,7 @@ mysql -u root -p
 # 新建数据库：walle
 CREATE DATABASE walle DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
 
-vi config/web.php
+
 vi config/local.php
 # 修改如下，
 'db' => [
@@ -27,9 +27,9 @@ curl -sS https://getcomposer.org/installer | php
 mv composer.phar /usr/local/bin/composer
 cd /data/www/walle-web/
 composer install --prefer-dist --no-dev --optimize-autoloader -vvvv
-# 上面的命令没用，需要将vendor.tgz拷贝过来才行
+# 上面的命令没用，需要将vendor.tgz拷贝过来并解压到walle-web目录才行
 
-./yii walle/setup
+./yii walle/setup   # 输入yes
 
 
 # 修改nginx配置
@@ -55,7 +55,26 @@ server {
 }
 
 
+# 设置walle-web目录权限
+chown -R www-data:www-data walle-web
 
+
+# 系统访问：
+http://localhost 或 http://ip
+# 使用系统已有用户admin/admin或demo/demo登录，admin角色为管理员，demo角色为开发者。
+# 注册时可选择管理员或开发者2个身份，其中管理员注册后要admin审核通过后才能成为管理员。
+# 管理员身份用户配置一个项目
+# 开发者注册用户提交上线单
+# 管理员审核上线单
+# 开发者发起上线
+
+
+
+
+# 升级walle
+sudo su
+cd /data/www/walle-web
+./yii walle/upgrade
 
 
 
